@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart'; // Bolne ke liye
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import 'api_service.dart';
@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _text = "System Initializing...";
   String _status = "OFFLINE";
 
-  // Animation (CodeNetra Orb)
+  // Animation (Zoom In/Out Effect)
   late AnimationController _orbController;
   late Animation<double> _orbAnimation;
 
@@ -34,13 +34,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _speech = stt.SpeechToText();
 
-    // Orb Pulse Animation
+    // Zoom In - Zoom Out Animation (Breathing)
     _orbController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    _orbAnimation = Tween<double>(begin: 0.85, end: 1.15).animate(
+    _orbAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
       CurvedAnimation(parent: _orbController, curve: Curves.easeInOut),
     );
 
@@ -75,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // 2. SUNNA (Listening)
+  // 2. LISTENING LOGIC
   void _startListening() async {
     if (_isThinking) return;
 
@@ -84,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         if (val == 'done' || val == 'notListening') {
           if (mounted && _isListening) {
             setState(() => _isListening = false);
-            _processVoice(); // Auto-Process
+            _processVoice();
           }
         }
       },
@@ -112,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() => _isListening = false);
   }
 
-  // 3. DIMAG (Analyzing)
+  // 3. AI LOGIC
   void _processVoice() async {
     if (_text.isEmpty || _text == "Listening..." || _text.length < 2) {
       _speak("I didn't catch that. Please try again.");
@@ -128,7 +128,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       final data = await _apiService.analyzeSentiment(_text);
 
-      // Dominant Emotion nikalo
       Map<String, dynamic> overall = data['overall'];
       String mood = "Neutral";
       int maxVal = 0;
@@ -176,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.black, // Pura Black Background
       appBar: AppBar(
         title: const Text("CODE NETRA AI",
             style: TextStyle(
@@ -190,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Status Box
+          // --- STATUS TEXT ---
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -199,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ? Colors.redAccent
                       : Colors.cyanAccent.withOpacity(0.5)),
               borderRadius: BorderRadius.circular(5),
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.transparent,
             ),
             child: Text(
               _status,
@@ -215,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
           const SizedBox(height: 50),
 
-          // --- THE ORB (Fixed: No Filter Error) ---
+          // --- THE ORB (Clean Black Background) ---
           Center(
             child: GestureDetector(
               onTap: () {
@@ -229,41 +228,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 animation: _orbAnimation,
                 builder: (context, child) {
                   return Transform.scale(
+                    // Jab sun raha ho tab Zoom In/Out karega
                     scale: _isListening ? _orbAnimation.value : 1.0,
                     child: Container(
-                      height: 220,
-                      width: 220,
-                      decoration: BoxDecoration(
+                      height: 400,
+                      width: 400,
+                      decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        // Gradient wahi CodeNetra wala
-                        gradient: const RadialGradient(
-                          colors: [
-                            Color(0xFFB388FF), // Light Purple
-                            Color(0xFF651FFF), // Deep Purple
-                            Color(0xFF2962FF), // Blue
-                          ],
-                          stops: [0.1, 0.5, 1.0],
-                        ),
-                        // ERROR FIX: 'filter' hata diya, 'boxShadow' use kiya
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF651FFF).withOpacity(0.6),
-                            blurRadius: _isListening ? 50 : 20,
-                            spreadRadius: _isListening ? 10 : 2,
-                          ),
-                        ],
+                        color: Colors.transparent,
+                        // Maine yahan se boxShadow (Glow) hata diya hai
                       ),
-                      child: Center(
-                        child: _isThinking
-                            ? const CircularProgressIndicator(
-                                color: Colors.white)
-                            : Icon(
-                                _isListening
-                                    ? Icons.graphic_eq
-                                    : Icons.mic_none,
-                                color: Colors.white,
-                                size: 80,
-                              ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          "assets/orb.gif",
+                          fit: BoxFit.cover, // Pura circle cover karega
+                          height: 400,
+                          width: 400,
+                        ),
                       ),
                     ),
                   );
@@ -272,9 +253,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          const SizedBox(height: 60),
+          const SizedBox(height: 50),
 
-          // Live Text
+          // --- LIVE TEXT ---
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 30),
             child: Text(

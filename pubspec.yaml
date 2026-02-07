@@ -1,6 +1,7 @@
 name: emosense_ai
-description: "A real-time sentiment analysis app."
+description: "A real-time sentiment analysis app powered by Gemini."
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
@@ -10,19 +11,30 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Ye sab Left Side me hone chahiye (Not under flutter)
+  # --- AI & Logic ---
   google_generative_ai: ^0.4.0
+  
+  # --- Voice & Speech ---
   speech_to_text: ^6.6.1
+  flutter_tts: ^3.8.3
+  
+  # --- UI & Charts ---
   fl_chart: ^0.68.0
-  permission_handler: ^11.3.1
-  flutter_tts: ^3.8.3  # Voice ke liye
-  intl: ^0.19.0
   cupertino_icons: ^1.0.6
+  
+  # --- Utils ---
+  permission_handler: ^11.3.1
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
 
+# --- Assets Configuration ---
 flutter:
   uses-material-design: true
+
+  # Yahan humne bataya hai ki orb.gif kahan hai
+  assets:
+    - assets/orb.gif
