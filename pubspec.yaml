@@ -1,49 +1,28 @@
 name: emosense_ai
-description: "A real-time sentiment analysis app powered by Gemini 1.5 Flash and Flutter."
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-
+description: "A real-time sentiment analysis app."
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
 
-  dependencies:
-    flutter:
-        sdk: flutter
+dependencies:
+  flutter:
+    sdk: flutter
 
-          # 1. The Brain (AI) 🧠
-            # Google's official package for Gemini API
-              google_generative_ai: ^0.4.0
+  # Ye sab Left Side me hone chahiye (Not under flutter)
+  google_generative_ai: ^0.4.0
+  speech_to_text: ^6.6.1
+  fl_chart: ^0.68.0
+  permission_handler: ^11.3.1
+  flutter_tts: ^3.8.3  # Voice ke liye
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.6
 
-                # 2. The Ears (Voice Input) 🎙️
-                  # Converts speech to text in real-time
-                    speech_to_text: ^6.6.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
 
-                      # 3. The Visuals (Charts) 📊
-                        # Beautiful charts to show Happy/Sad percentages (HR Requirement)
-                          fl_chart: ^0.69.0
-
-                            # 4. Permissions (Security) 🔐
-                              # Handles Microphone permission smoothly on Android
-                                permission_handler: ^11.3.1
-
-                                  # 5. Formatting (Utils) 🕒
-                                    # To format time in the Timeline list (e.g., "10:30 AM")
-                                      intl: ^0.19.0
-
-                                        # 6. UI Polish (Optional but Good) ✨
-                                          # For nice icons (if needed)
-                                            cupertino_icons: ^1.0.6
-
-                                            dev_dependencies:
-                                              flutter_test:
-                                                  sdk: flutter
-                                                    flutter_lints: ^3.0.0
-
-                                                    # Assets section (For your images/logos)
-                                                    flutter:
-                                                      uses-material-design: true
-
-                                                        # Agar aapne koi image folder banaya hai to ye line uncomment karein:
-                                                          # assets:
-                                                            #   - assets/images/
+flutter:
+  uses-material-design: true
