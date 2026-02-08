@@ -105,18 +105,19 @@ class ApiService {
 4️⃣ Run the Application
 flutter run
 
-📂 Professional Project Structure
+## 📂 Professional Project Structure
+
 We follow a clean, scalable architecture separating UI (Views) from Logic (Core).
-lib/
-├── core/                # 🔒 (Git-Ignored) Business Logic & Services
-│   └── services/
-│       └── api_service.dart  <-- The Brain (You create this)
-├── views/               # 🎨 UI Layer
-│   ├── home/            # Main Voice Interface & Glass Panel
-│   ├── splash/          # Cinematic Intro
-│   └── ...
-├── widgets/             # Reusable UI Components
-└── main.dart            # Application Entry Point
+
+* 📂 **lib/**
+    * 🔒 **core/** — *(Git-Ignored) Business Logic & Services*
+        * 📂 **services/**
+            * 📄 `api_service.dart` — *The Brain (You must create this manually)*
+    * 🎨 **views/** — *UI Layer*
+        * 📂 **home/** — *Main Voice Interface & Glass Panel*
+        * 📂 **splash/** — *Cinematic Intro*
+    * 🧩 **widgets/** — *Reusable UI Components*
+    * 🚀 `main.dart` — *Application Entry Point*
 
 🛠️ Tech Stack
 Framework: Flutter (Dart)
