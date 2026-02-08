@@ -1,12 +1,16 @@
 import 'dart:async';
-import 'dart:ui'; // Glass effect के लिए
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 
-// ✅ फिक्स: पाथ में 'services' (s के साथ) कर दिया गया है
+// ✅ Services Import
 import '../../core/services/api_service.dart';
+
+// -----------------------------------------------------------
+// 1️⃣ MAIN HOME SCREEN
+// -----------------------------------------------------------
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,39 +29,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _isListening = false;
   bool _isThinking = false;
   bool _showResultPanel = false;
-  String _text = "";
-  String _status = "STANDBY";
+  String _text = "Tap to Orb";
+  String _status = "SYSTEM OFFLINE";
 
   // Data Holders
   Map<String, dynamic>? _sentimentData;
   String _advice = "";
+  
+  // Jarvis Dummy Data Holders
+  String _heartRate = "--";
+  String _stressLevel = "--";
+  String _energyLevel = "--";
 
   // Animations
-  late AnimationController _orbController;
-  late Animation<double> _orbAnimation;
   late AnimationController _panelController;
   late Animation<Offset> _panelAnimation;
-  late AnimationController _pulseController;
+  late AnimationController _textPulseController;
 
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
 
-    // Orb Animation
-    _orbController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    _orbAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _orbController, curve: Curves.easeInOut),
-    );
-
-    // Slide Up Animation
+    // Panel Animation
     _panelController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800),
     );
 
     _panelAnimation = Tween<Offset>(
@@ -66,10 +63,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(
         parent: _panelController, curve: Curves.fastLinearToSlowEaseIn));
 
-    // Pulse Animation
-    _pulseController = AnimationController(
+    // ✅ Text Pulse Animation
+    _textPulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
     _initSystem();
@@ -77,14 +74,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _initSystem() async {
     await Permission.microphone.request();
+    
+    // ✅ JARVIS SETTINGS
     await _tts.setLanguage("en-US");
-    await _tts.setPitch(0.6);
-    await _tts.setSpeechRate(0.5);
+    await _tts.setPitch(1.0);
+    await _tts.setSpeechRate(0.6);
 
     if (mounted) setState(() => _status = "SYSTEM ONLINE");
 
-    await Future.delayed(const Duration(milliseconds: 1000));
-    await _speak("EmoSense AI is Online, Sir.");
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _speak("EmoSense AI Online, Sir.");
   }
 
   Future<void> _speak(String text) async {
@@ -105,12 +104,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() => _showResultPanel = false);
     }
 
-    await _speak("I am here, Sir.");
+    await _speak("I am listening, Sir.");
     _startListening();
   }
 
   void _startListening() async {
     bool available = await _speech.initialize(
+      onError: (val) => print('Error: $val'),
       onStatus: (val) {
         if (val == 'done' || val == 'notListening') {
           if (mounted && _isListening) {
@@ -127,8 +127,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _status = "LISTENING...";
         _text = "Listening...";
       });
+
       _speech.listen(
-          onResult: (val) => setState(() => _text = val.recognizedWords));
+        onResult: (val) => setState(() => _text = val.recognizedWords),
+        pauseFor: const Duration(seconds: 3),
+        listenFor: const Duration(seconds: 30),
+        cancelOnError: false,
+        partialResults: true,
+      );
     }
   }
 
@@ -139,14 +145,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _processVoice() async {
     if (_text.isEmpty || _text == "Listening..." || _text.length < 2) {
-      _speak("Input unclear. Please tap again.");
+      _speak("Audio not captured. Please try again.");
       setState(() => _status = "STANDBY");
       return;
     }
 
     setState(() {
       _isThinking = true;
-      _status = "PROCESSING...";
+      _status = "ANALYZING MOOD...";
     });
 
     try {
@@ -163,25 +169,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
 
+      _generateJarvisData(mood);
+
       String action = "";
       if (mood == "Happy") {
-        action = "Keep maintaining this energy level.";
+        action = "Energy levels are optimal.";
       } else if (mood == "Sad") {
-        action = "I recommend taking a short break. Playing calming music now.";
+        action = "Dopamine levels low. Recommending rest.";
       } else if (mood == "Angry") {
-        action =
-            "Pulse elevated. Deep breathing protocols advised immediately.";
+        action = "Adrenaline spike detected. Calm down, Sir.";
       } else if (mood == "Fear") {
-        action = "Analyze the threat logically. You are safe, Sir.";
+        action = "Stress markers elevated. You are safe.";
       } else {
-        action = "Systems functioning within normal parameters.";
+        action = "All systems normal.";
       }
 
       setState(() {
         _advice = action;
       });
 
-      await _speak("Processing complete. User is $mood. $action");
+      await _speak("Analysis complete. You are $mood. $action");
 
       setState(() {
         _isThinking = false;
@@ -189,20 +196,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _showResultPanel = true;
       });
       _panelController.forward();
+
     } catch (e) {
-      _speak("System failure. Unable to analyze.");
+      _speak("Unable to connect to Gemini server.");
       setState(() {
         _isThinking = false;
-        _text = "Error: Check Connection";
+        _text = "Error: Check Internet";
       });
+    }
+  }
+
+  void _generateJarvisData(String mood) {
+    if (mood == "Angry") {
+      _heartRate = "120 BPM";
+      _stressLevel = "HIGH";
+      _energyLevel = "SPIKING";
+    } else if (mood == "Fear") {
+      _heartRate = "110 BPM";
+      _stressLevel = "CRITICAL";
+      _energyLevel = "UNSTABLE";
+    } else if (mood == "Sad") {
+      _heartRate = "65 BPM";
+      _stressLevel = "MODERATE";
+      _energyLevel = "LOW";
+    } else if (mood == "Happy") {
+      _heartRate = "85 BPM";
+      _stressLevel = "NORMAL";
+      _energyLevel = "OPTIMAL";
+    } else {
+      _heartRate = "72 BPM";
+      _stressLevel = "LOW";
+      _energyLevel = "STABLE";
     }
   }
 
   @override
   void dispose() {
-    _orbController.dispose();
     _panelController.dispose();
-    _pulseController.dispose();
+    _textPulseController.dispose();
     super.dispose();
   }
 
@@ -219,8 +250,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 SafeArea(
                   child: Container(
                     margin: const EdgeInsets.only(top: 20),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
                           color: _isListening
@@ -228,62 +258,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               : Colors.cyanAccent.withOpacity(0.5)),
                       borderRadius: BorderRadius.circular(5),
                     ),
-                    child: Text(_status,
-                        style: TextStyle(
-                            color: _isListening
-                                ? Colors.redAccent
-                                : Colors.cyanAccent,
-                            fontFamily: 'Courier',
-                            letterSpacing: 2.0,
-                            fontWeight: FontWeight.bold)),
+                    child: Text(
+                      _status,
+                      style: TextStyle(
+                          color: _isListening ? Colors.redAccent : Colors.cyanAccent,
+                          fontFamily: 'Courier',
+                          letterSpacing: 2.0,
+                          fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 const Spacer(),
-                if (!_isListening && !_isThinking) ...[
+
+                // ✅ ORB WIDGET
+                Orb(
+                  onTap: _handleOrbTap,
+                  isListening: _isListening || _isThinking,
+                ),
+
+                const SizedBox(height: 30),
+                
+                // ✅ ONLY ONE TEXT HERE (Big & Animated)
+                if (!_isListening && !_isThinking)
                   FadeTransition(
-                    opacity: _pulseController,
-                    child: Column(
-                      children: [
-                        const Icon(Icons.fingerprint,
-                            color: Colors.cyanAccent, size: 50),
-                        const SizedBox(height: 10),
-                        Text(
-                          "TAP ORB TO START",
-                          style: TextStyle(
-                              color: Colors.cyanAccent.withOpacity(0.8),
-                              fontFamily: 'Courier',
-                              letterSpacing: 3.0,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    opacity: Tween<double>(begin: 0.6, end: 1.0).animate(_textPulseController),
+                    child: const Text(
+                      "TAP TO ORB",
+                      style: TextStyle(
+                          color: Colors.cyanAccent, 
+                          fontFamily: 'Courier',
+                          letterSpacing: 3.0, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18), 
                     ),
                   ),
-                  const SizedBox(height: 30),
-                ],
-                GestureDetector(
-                  onTap: _handleOrbTap,
-                  child: AnimatedBuilder(
-                    animation: _orbAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _isListening ? _orbAnimation.value : 1.0,
-                        child: Container(
-                          height: 350,
-                          width: 350,
-                          decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.transparent),
-                          child: ClipOval(
-                            child: Image.asset("assets/orb.gif",
-                                fit: BoxFit.cover),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 40),
+
+                const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30),
                   child: Text(
@@ -291,13 +301,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         color: Colors.white.withOpacity(0.7),
-                        fontSize: 16,
+                        fontSize: 14,
                         fontFamily: 'Courier',
                         letterSpacing: 1.0),
                   ),
                 ),
                 const Spacer(),
-                const SizedBox(height: 120),
+                const SizedBox(height: 100),
               ],
             ),
           ),
@@ -313,6 +323,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  // ✅ JARVIS STYLE GLASS CARD
   Widget _buildGlassCard() {
     if (_sentimentData == null) return const SizedBox.shrink();
     var overall = _sentimentData!['overall'] as Map<String, dynamic>;
@@ -326,11 +337,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           width: double.infinity,
           padding: const EdgeInsets.all(25),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.8),
+            color: Colors.black.withOpacity(0.85),
             border: const Border(
                 top: BorderSide(color: Colors.cyanAccent, width: 2)),
             gradient: LinearGradient(
-              colors: [Colors.cyanAccent.withOpacity(0.15), Colors.black],
+              colors: [Colors.cyanAccent.withOpacity(0.1), Colors.black],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -344,21 +355,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       height: 4,
                       color: Colors.white24,
                       margin: const EdgeInsets.only(bottom: 20))),
+              
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("DIAGNOSTIC REPORT",
+                  const Text("BIOMETRIC ANALYSIS",
                       style: TextStyle(
                           color: Colors.cyanAccent,
                           fontSize: 14,
                           letterSpacing: 3,
                           fontFamily: 'Courier',
                           fontWeight: FontWeight.bold)),
-                  const Icon(Icons.data_usage,
+                  const Icon(Icons.monitor_heart_outlined,
                       color: Colors.cyanAccent, size: 20),
                 ],
               ),
               const SizedBox(height: 20),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildDataBox("HEART RATE", _heartRate),
+                  _buildDataBox("STRESS", _stressLevel),
+                  _buildDataBox("ENERGY", _energyLevel),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
@@ -374,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("AI PROTOCOL:",
+                          const Text("JARVIS PROTOCOL:",
                               style: TextStyle(
                                   color: Colors.white54,
                                   fontSize: 10,
@@ -384,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           Text(_advice.toUpperCase(),
                               style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 13,
+                                  fontSize: 12,
                                   fontFamily: 'Courier',
                                   fontWeight: FontWeight.bold)),
                         ],
@@ -401,6 +425,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       letterSpacing: 2,
                       fontFamily: 'Courier')),
               const SizedBox(height: 10),
+              
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -412,6 +437,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   }).toList(),
                 ),
               ),
+              
               Center(
                 child: GestureDetector(
                   onTap: () => _panelController.reverse(),
@@ -435,6 +461,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDataBox(String title, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(color: Colors.white54, fontSize: 9, fontFamily: 'Courier')),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Courier', fontWeight: FontWeight.bold)),
+      ],
     );
   }
 
@@ -466,6 +503,67 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           minHeight: 2,
         ),
       ],
+    );
+  }
+}
+
+// -----------------------------------------------------------
+// 3️⃣ CLEAN ORB WIDGET (Final Version)
+// -----------------------------------------------------------
+
+class Orb extends StatefulWidget {
+  final VoidCallback onTap;
+  final bool isListening;
+
+  const Orb({
+    super.key,
+    required this.onTap,
+    required this.isListening,
+  });
+
+  @override
+  State<Orb> createState() => _OrbState();
+}
+
+class _OrbState extends State<Orb> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          double scaleValue = 1.0 + (_controller.value * (widget.isListening ? 0.15 : 0.08));
+          return Transform.scale(
+            scale: scaleValue,
+            child: Container(
+              height: 600,
+              width: 600,
+              child: Image.asset(
+                "assets/orb.gif",
+                fit: BoxFit.cover,
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
