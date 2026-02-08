@@ -107,7 +107,7 @@ flutter run
 
 ## 📂 Professional Project Structure
 
-We follow a clean, scalable architecture separating UI (Views) from Logic (Core).
+We follow a clean, scalable architecture separating **UI (Views)** from **Logic (Core)**.
 
 * 📂 **lib/**
     * 🔒 **core/** — *(Git-Ignored) Business Logic & Services*
@@ -119,17 +119,22 @@ We follow a clean, scalable architecture separating UI (Views) from Logic (Core)
     * 🧩 **widgets/** — *Reusable UI Components*
     * 🚀 `main.dart` — *Application Entry Point*
 
-🛠️ Tech Stack
-Framework: Flutter (Dart)
 
-AI Model: Google Gemini 1.5 Flash
+## 🛠️ Tech Stack
 
-Speech Recognition: speech_to_text
+* **Framework:** 🐦 [Flutter](https://flutter.dev) (Dart)
+* **AI Model:** 🧠 [Google Gemini 1.5 Flash](https://deepmind.google/technologies/gemini/)
+* **Speech Recognition:** 🎙️ `speech_to_text`
+* **Text-to-Speech:** 🗣️ `flutter_tts`
+* **State Management:** ⚡ `setState` (Optimized for performance)
+* **Architecture:** 🛡️ MVVM Style (Separation of Concerns)
 
-Text-to-Speech: flutter_tts
+## 👨‍💻 Developed By
 
-State Management: setState (Optimized for performance)
+**Roshan**
+*Passionate Flutter Developer & AI Innovator*
 
-👨‍💻 Developed By
-Roshan Passionate Flutter Developer & AI Innovator
+> *"Building the future of AI-powered interactions, one line of code at a time."*
+
+[![GitHub](https://img.shields.io/badge/GitHub-roshancodes036--sudo-181717?style=for-the-badge&logo=github)](https://github.com/roshancodes036-sudo)
 
