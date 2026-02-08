@@ -30,6 +30,33 @@ Unlike traditional text-based sentiment tools, EmoSense listens to your **voice*
 | **🔒 Privacy-First Architecture** | API keys and core logic are isolated from the codebase for maximum security. |
 
 ---
+📂 Professional Project Structure
+We follow a clean, scalable architecture separating UI (Views) from Logic (Core).
+
+lib/
+├── core/                # 🔒 (Git-Ignored) Business Logic & Services
+│   └── services/
+│       └── api_service.dart  <-- The Brain (You create this)
+├── views/               # 🎨 UI Layer
+│   ├── home/            # Main Voice Interface & Glass Panel
+│   ├── splash/          # Cinematic Intro
+│   └── ...
+├── widgets/             # Reusable UI Components
+└── main.dart            # Application Entry Point
+
+🛠️ Tech Stack
+Framework: Flutter (Dart)
+
+AI Model: Google Gemini 1.5 Flash
+
+Speech Recognition: speech_to_text
+
+Text-to-Speech: flutter_tts
+
+State Management: setState (Optimized for performance)
+
+👨‍💻 Developed By
+Roshan Passionate Flutter Developer & AI Innovator
 
 ## 🛠️ Installation & Setup Guide (Critical)
 
@@ -104,37 +131,4 @@ class ApiService {
 
 4️⃣ Run the Application
 flutter run
-
-## 📂 Professional Project Structure
-
-We follow a clean, scalable architecture separating **UI (Views)** from **Logic (Core)**.
-
-* 📂 **lib/**
-    * 🔒 **core/** — *(Git-Ignored) Business Logic & Services*
-        * 📂 **services/**
-            * 📄 `api_service.dart` — *The Brain (You must create this manually)*
-    * 🎨 **views/** — *UI Layer*
-        * 📂 **home/** — *Main Voice Interface & Glass Panel*
-        * 📂 **splash/** — *Cinematic Intro*
-    * 🧩 **widgets/** — *Reusable UI Components*
-    * 🚀 `main.dart` — *Application Entry Point*
-
-
-## 🛠️ Tech Stack
-
-* **Framework:** 🐦 [Flutter](https://flutter.dev) (Dart)
-* **AI Model:** 🧠 [Google Gemini 1.5 Flash](https://deepmind.google/technologies/gemini/)
-* **Speech Recognition:** 🎙️ `speech_to_text`
-* **Text-to-Speech:** 🗣️ `flutter_tts`
-* **State Management:** ⚡ `setState` (Optimized for performance)
-* **Architecture:** 🛡️ MVVM Style (Separation of Concerns)
-
-## 👨‍💻 Developed By
-
-**Roshan**
-*Passionate Flutter Developer & AI Innovator*
-
-> *"Building the future of AI-powered interactions, one line of code at a time."*
-
-[![GitHub](https://img.shields.io/badge/GitHub-roshancodes036--sudo-181717?style=for-the-badge&logo=github)](https://github.com/roshancodes036-sudo)
 
