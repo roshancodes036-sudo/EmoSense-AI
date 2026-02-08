@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'splash_screen.dart';
+import 'views/splash/splash_screen.dart'; // ✅ सही प्रोफेशनल पाथ
 
 void main() {
+  // 1. इंजन को शुरू करने के लिए यह लाइन सबसे ज़रूरी है (Fixes NotInitializedError)
+  WidgetsFlutterBinding.ensureInitialized();
+  
   runApp(const EmoSenseApp());
 }
 
@@ -15,13 +18,13 @@ class EmoSenseApp extends StatelessWidget {
       title: 'EmoSense AI',
       theme: ThemeData(
         brightness: Brightness.dark,
-        primarySwatch: Colors.cyan,
+        primaryColor: Colors.cyanAccent,
         scaffoldBackgroundColor: Colors.black,
         useMaterial3: true,
-        fontFamily: 'Courier',
+        fontFamily: 'Courier', // प्रोफेशनल जार्विस फॉन्ट
       ),
-      // ERROR FIX: Yahan se 'const' hata diya hai
-      home: SplashScreen(),
+      // ऐप हमेशा स्पलैश स्क्रीन से शुरू होगा
+      home: const SplashScreen(),
     );
   }
 }

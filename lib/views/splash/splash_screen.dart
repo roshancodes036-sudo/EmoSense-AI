@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
+// ✅ रास्ता फिक्स: अब यह 'home' फोल्डर के अंदर झाँकेगा
+import '../home/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -34,10 +35,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    Timer(const Duration(milliseconds: 2000), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+    // Jarvis Style Timing
+    Timer(const Duration(milliseconds: 3000), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
     });
   }
 
@@ -59,9 +63,8 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ERROR FIX: 'const' hata diya LinearGradient se
                 ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(
+                  shaderCallback: (bounds) => const LinearGradient(
                     colors: [
                       Color(0xFF2962FF),
                       Color(0xFFB388FF),
@@ -81,23 +84,21 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
                 const Text(
-                  "INITIALIZING...",
+                  "SYSTEM INITIALIZING...",
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: Colors.cyanAccent, // Jarvis theme touch
                     fontSize: 12,
-                    letterSpacing: 2.0,
+                    letterSpacing: 3.0,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 30),
-
                 const SizedBox(
-                  width: 150,
+                  width: 200,
                   child: LinearProgressIndicator(
-                    color: Color(0xFF651FFF),
+                    color: Colors.cyanAccent,
                     backgroundColor: Colors.white10,
                     minHeight: 2,
                   ),

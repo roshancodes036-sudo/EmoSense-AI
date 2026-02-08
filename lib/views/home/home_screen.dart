@@ -1,10 +1,12 @@
 import 'dart:async';
-import 'dart:ui'; // Glass effect
+import 'dart:ui'; // Glass effect के लिए
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
-import 'api_service.dart';
+
+// ✅ फिक्स: पाथ में 'services' (s के साथ) कर दिया गया है
+import '../../core/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _isListening = false;
   bool _isThinking = false;
   bool _showResultPanel = false;
-  String _text = ""; // Shuru me khali rakhenge taaki clean lage
+  String _text = "";
   String _status = "STANDBY";
 
   // Data Holders
@@ -35,14 +37,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _orbAnimation;
   late AnimationController _panelController;
   late Animation<Offset> _panelAnimation;
-  late AnimationController _pulseController; // Icon ke liye
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
 
-    // 1. Orb Animation (Slow Breathing)
+    // Orb Animation
     _orbController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -52,10 +54,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       CurvedAnimation(parent: _orbController, curve: Curves.easeInOut),
     );
 
-    // 2. Slide Up Animation for Card
+    // Slide Up Animation
     _panelController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000), // Thoda slow scan effect
+      duration: const Duration(milliseconds: 1000),
     );
 
     _panelAnimation = Tween<Offset>(
@@ -64,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(
         parent: _panelController, curve: Curves.fastLinearToSlowEaseIn));
 
-    // 3. Icon Pulse Animation
+    // Pulse Animation
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -75,14 +77,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _initSystem() async {
     await Permission.microphone.request();
-    // 🔥 JARVIS VOICE SETTINGS 🔥
     await _tts.setLanguage("en-US");
-    await _tts.setPitch(0.6); // Deep Robotic Voice
-    await _tts.setSpeechRate(0.5); // Clear & Command style
+    await _tts.setPitch(0.6);
+    await _tts.setSpeechRate(0.5);
 
     if (mounted) setState(() => _status = "SYSTEM ONLINE");
 
-    // STARTUP DIALOGUE 🗣️
     await Future.delayed(const Duration(milliseconds: 1000));
     await _speak("EmoSense AI is Online, Sir.");
   }
@@ -90,27 +90,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _speak(String text) async {
     if (text.isNotEmpty) {
       await _tts.speak(text);
-      await _tts.awaitSpeakCompletion(true); // Pura bolne ka wait karega
+      await _tts.awaitSpeakCompletion(true);
     }
   }
 
-  // --- TAP INTERACTION LOGIC ---
   void _handleOrbTap() async {
     if (_isListening || _isThinking) {
       _stopListening();
       return;
     }
 
-    // 1. Panel band karo agar khula hai
     if (_showResultPanel) {
       _panelController.reverse();
       setState(() => _showResultPanel = false);
     }
 
-    // 2. JARVIS RESPONSE 🗣️
     await _speak("I am here, Sir.");
-
-    // 3. Listening Start
     _startListening();
   }
 
@@ -142,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() => _isListening = false);
   }
 
-  // --- JARVIS BRAIN 🧠 ---
   void _processVoice() async {
     if (_text.isEmpty || _text == "Listening..." || _text.length < 2) {
       _speak("Input unclear. Please tap again.");
@@ -159,7 +153,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final data = await _apiService.analyzeSentiment(_text);
       _sentimentData = data;
 
-      // Emotion Nikalo
       Map<String, dynamic> overall = data['overall'];
       String mood = "Neutral";
       int maxVal = 0;
@@ -170,7 +163,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
 
-      // --- ADVICE LOGIC ---
       String action = "";
       if (mood == "Happy") {
         action = "Keep maintaining this energy level.";
@@ -189,10 +181,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _advice = action;
       });
 
-      // 1. Result Bolo 🗣️
       await _speak("Processing complete. User is $mood. $action");
 
-      // 2. Card Show Karo (Animation) 🚀
       setState(() {
         _isThinking = false;
         _status = "ANALYSIS COMPLETE";
@@ -209,17 +199,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   @override
+  void dispose() {
+    _orbController.dispose();
+    _panelController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // FIX: SizedBox.expand taaki sab Center me rahe
           SizedBox.expand(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // STATUS BAR (Top)
                 SafeArea(
                   child: Container(
                     margin: const EdgeInsets.only(top: 20),
@@ -242,10 +238,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             fontWeight: FontWeight.bold)),
                   ),
                 ),
-
                 const Spacer(),
-
-                // --- TAP GUIDE (New Feature) ---
                 if (!_isListening && !_isThinking) ...[
                   FadeTransition(
                     opacity: _pulseController,
@@ -268,10 +261,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 30),
                 ],
-
-                // --- THE ORB ---
                 GestureDetector(
-                  onTap: _handleOrbTap, // Yahan Naya Logic Hai
+                  onTap: _handleOrbTap,
                   child: AnimatedBuilder(
                     animation: _orbAnimation,
                     builder: (context, child) {
@@ -292,10 +283,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     },
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
-                // Live Transcript
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30),
                   child: Text(
@@ -308,14 +296,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         letterSpacing: 1.0),
                   ),
                 ),
-
                 const Spacer(),
                 const SizedBox(height: 120),
               ],
             ),
           ),
-
-          // --- ROBOTIC GLASS PANEL ---
           SlideTransition(
             position: _panelAnimation,
             child: Align(
@@ -328,10 +313,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // --- GLASS CARD DESIGN ---
   Widget _buildGlassCard() {
     if (_sentimentData == null) return const SizedBox.shrink();
-
     var overall = _sentimentData!['overall'] as Map<String, dynamic>;
 
     return ClipRRect(
@@ -343,8 +326,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           width: double.infinity,
           padding: const EdgeInsets.all(25),
           decoration: BoxDecoration(
-            color:
-                Colors.black.withOpacity(0.8), // Darker background for contrast
+            color: Colors.black.withOpacity(0.8),
             border: const Border(
                 top: BorderSide(color: Colors.cyanAccent, width: 2)),
             gradient: LinearGradient(
@@ -356,15 +338,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle Bar
               Center(
                   child: Container(
                       width: 50,
                       height: 4,
                       color: Colors.white24,
                       margin: const EdgeInsets.only(bottom: 20))),
-
-              // HEADING
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -380,8 +359,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ],
               ),
               const SizedBox(height: 20),
-
-              // RECOMMENDED ACTION BOX
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
@@ -416,7 +393,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ],
                 ),
               ),
-
               const SizedBox(height: 25),
               const Text("EMOTION MATRIX:",
                   style: TextStyle(
@@ -425,8 +401,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       letterSpacing: 2,
                       fontFamily: 'Courier')),
               const SizedBox(height: 10),
-
-              // EMOTION GRIDS
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -438,13 +412,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   }).toList(),
                 ),
               ),
-
-              // Dismiss Button
               Center(
                 child: GestureDetector(
-                  onTap: () {
-                    _panelController.reverse();
-                  },
+                  onTap: () => _panelController.reverse(),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 30, vertical: 10),
