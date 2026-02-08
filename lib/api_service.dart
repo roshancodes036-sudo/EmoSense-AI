@@ -2,49 +2,57 @@ import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class ApiService {
-  // अपनी API Key यहाँ डालें
-  static const String _apiKey = 'YOUR_GEMINI_API_KEY_HERE';
+  // Yahan apani API Key Dalein
+  static const String _apiKey = "AIzaSy..."; // Apni Real Key yahan daalein
 
-  final model = GenerativeModel(
-    model: 'gemini-1.5-flash',
-    apiKey: _apiKey,
-  );
+  late final GenerativeModel _model;
+
+  ApiService() {
+    _model = GenerativeModel(
+      model: 'gemini-1.5-flash',
+      apiKey: _apiKey,
+    );
+  }
 
   Future<Map<String, dynamic>> analyzeSentiment(String text) async {
     final prompt = '''
       Analyze the sentiment of the following text: "$text".
-      
-      You must return the response in STRICT JSON format (do not use markdown code blocks).
-      The JSON structure must be:
+      Return the result strictly as a JSON object with this format:
       {
-        "overall": {
-          "Happy": <percentage>,
-          "Sad": <percentage>,
-          "Angry": <percentage>,
-          "Neutral": <percentage>
-        },
-        "timeline": [
-          {"text": "<sentence 1>", "emotion": "<emotion>", "time": "Start"},
-          {"text": "<sentence 2>", "emotion": "<emotion>", "time": "End"}
-        ]
+        "overall": {"Happy": 0, "Sad": 0, "Angry": 0, "Neutral": 0, "Fear": 0, "Surprise": 0},
+        "details": "A one-line summary of why."
       }
-      Ensure the percentages in "overall" sum up to 100.
+      Do not include ```json or any markdown formatting. Just the raw JSON.
     ''';
 
     try {
-      final response = await model.generateContent([Content.text(prompt)]);
-      print("Gemini Response: ${response.text}"); // Debugging ke liye
+      final content = [Content.text(prompt)];
+      final response = await _model.generateContent(content);
 
-      // Markdown hatana agar Gemini galti se ```json laga de
-      String cleanJson = response.text!
-          .replaceAll('```json', '')
-          .replaceAll('```', '')
-          .trim();
+      String? resultText = response.text;
 
-      return jsonDecode(cleanJson);
+      if (resultText != null) {
+        // Cleaning the response just in case
+        resultText =
+            resultText.replaceAll('```json', '').replaceAll('```', '').trim();
+        return jsonDecode(resultText);
+      } else {
+        throw Exception("Empty response from AI");
+      }
     } catch (e) {
-      print("Error analyzing sentiment: $e");
-      return {}; // Error aane par khali map bhejein
+      print("Error: $e");
+      // Fallback agar error aaye
+      return {
+        "overall": {
+          "Happy": 0,
+          "Sad": 0,
+          "Angry": 0,
+          "Neutral": 100,
+          "Fear": 0,
+          "Surprise": 0
+        },
+        "details": "Error analyzing sentiment."
+      };
     }
   }
 }
