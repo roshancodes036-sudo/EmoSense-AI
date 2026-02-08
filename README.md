@@ -30,33 +30,36 @@ Unlike traditional text-based sentiment tools, EmoSense listens to your **voice*
 | **🔒 Privacy-First Architecture** | API keys and core logic are isolated from the codebase for maximum security. |
 
 ---
-📂 Professional Project Structure
-We follow a clean, scalable architecture separating UI (Views) from Logic (Core).
 
-lib/
-├── core/                # 🔒 (Git-Ignored) Business Logic & Services
-│   └── services/
-│       └── api_service.dart  <-- The Brain (You create this)
-├── views/               # 🎨 UI Layer
-│   ├── home/            # Main Voice Interface & Glass Panel
-│   ├── splash/          # Cinematic Intro
-│   └── ...
-├── widgets/             # Reusable UI Components
-└── main.dart            # Application Entry Point
+## 📂 Professional Project Structure
 
-🛠️ Tech Stack
-Framework: Flutter (Dart)
+We follow a clean, scalable architecture separating **UI (Views)** from **Logic (Core)**.
 
-AI Model: Google Gemini 1.5 Flash
+| Directory / File | Description |
+| :--- | :--- |
+| 📂 **lib/** | Root directory of the source code. |
+| 🔒 **lib/core/** | **Git-Ignored** folder for Business Logic & Services. |
+| 📄 `api_service.dart` | The **AI Brain** (You must create this manually). |
+| 🎨 **lib/views/** | UI Layer containing all screens. |
+| 🏠 **lib/views/home/** | Main Voice Interface & Glass Panel. |
+| 🎬 **lib/views/splash/** | Cinematic Intro Screen. |
+| 🧩 **lib/widgets/** | Reusable UI Components. |
+| 🚀 `main.dart` | Application Entry Point. |
 
-Speech Recognition: speech_to_text
+---
 
-Text-to-Speech: flutter_tts
+## 🛠️ Tech Stack
 
-State Management: setState (Optimized for performance)
+| Category | Technology Used |
+| :--- | :--- |
+| **Framework** | 🐦 [Flutter](https://flutter.dev) (Dart) |
+| **AI Model** | 🧠 [Google Gemini 1.5 Flash](https://deepmind.google/technologies/gemini/) |
+| **Speech Recog.** | 🎙️ `speech_to_text` |
+| **Text-to-Speech** | 🗣️ `flutter_tts` |
+| **State Mgmt.** | ⚡ `setState` (Optimized for performance) |
+| **Architecture** | 🛡️ Secure MVVM Style |
 
-👨‍💻 Developed By
-Roshan Passionate Flutter Developer & AI Innovator
+---
 
 ## 🛠️ Installation & Setup Guide (Critical)
 
@@ -132,3 +135,6 @@ class ApiService {
 4️⃣ Run the Application
 flutter run
 
+👨‍💻 Developed By
+Roshan	
+👨‍💻 Flutter Developer & AI Innovator
