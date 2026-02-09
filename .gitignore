@@ -28,6 +28,7 @@ ios/Flutter/Flutter.podspec
 /android/.gradle/
 /android/app/build/
 /android/build/
+*.apk
 
 # iOS
 /ios/Podfile.lock
@@ -45,5 +46,3 @@ nbproject/
 
 # Ignore core business logic
 lib/core/
-*.apk
-*.zip
