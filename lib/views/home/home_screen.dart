@@ -5,12 +5,9 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 
-// ✅ Services Import
+// ✅ Custom Imports
 import '../../core/services/api_service.dart';
-
-// -----------------------------------------------------------
-// 1️⃣ MAIN HOME SCREEN
-// -----------------------------------------------------------
+import '../../widgets/orb_widget.dart'; // We are importing the separate Orb file here
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,7 +27,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _isThinking = false;
   bool _showResultPanel = false;
 
-  // ✅ FIX: इसे खाली कर दिया ताकि नीचे डुप्लीकेट टेक्स्ट न आए
   String _text = "";
   String _status = "SYSTEM OFFLINE";
 
@@ -77,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _initSystem() async {
     await Permission.microphone.request();
 
-    // JARVIS SETTINGS
+    // JARVIS VOICE SETTINGS
     await _tts.setLanguage("en-US");
     await _tts.setPitch(1.0);
     await _tts.setSpeechRate(0.6);
@@ -175,15 +171,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       String action = "";
       if (mood == "Happy") {
-        action = "Energy levels are optimal.";
+        action = "Energy levels are optimal. Productivity is high.";
       } else if (mood == "Sad") {
         action = "Dopamine levels low. Recommending rest.";
       } else if (mood == "Angry") {
-        action = "Adrenaline spike detected. Calm down, Sir.";
+        action = "Adrenaline spike detected. Deep breathing advised.";
       } else if (mood == "Fear") {
-        action = "Stress markers elevated. You are safe.";
+        action = "Stress markers elevated. You are safe, Sir.";
       } else {
-        action = "All systems normal.";
+        action = "All systems operating normally.";
       }
 
       setState(() {
@@ -248,6 +244,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // STATUS BAR
                 SafeArea(
                   child: Container(
                     margin: const EdgeInsets.only(top: 20),
@@ -274,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 const Spacer(),
 
-                // ✅ ORB WIDGET
+                // ✅ ORB WIDGET (Using the separate file now)
                 Orb(
                   onTap: _handleOrbTap,
                   isListening: _isListening || _isThinking,
@@ -282,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                 const SizedBox(height: 30),
 
-                // ✅ BIG ANIMATED TEXT (Sirf yahi dikhega)
+                // ANIMATED TEXT
                 if (!_isListening && !_isThinking)
                   FadeTransition(
                     opacity: Tween<double>(begin: 0.6, end: 1.0)
@@ -300,8 +297,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                 const SizedBox(height: 20),
 
-                // ✅ RESULT TEXT (Sirf tab dikhega jab aap bolenge)
-                if (_text.isNotEmpty)
+                // SPEECH TEXT
+                if (_text.isNotEmpty && _text != "Tap to Orb")
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
                     child: Text(
@@ -320,6 +317,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
+          
+          // RESULT PANEL
           SlideTransition(
             position: _panelAnimation,
             child: Align(
@@ -332,7 +331,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ✅ JARVIS STYLE GLASS CARD
   Widget _buildGlassCard() {
     if (_sentimentData == null) return const SizedBox.shrink();
     var overall = _sentimentData!['overall'] as Map<String, dynamic>;
@@ -513,68 +511,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           minHeight: 2,
         ),
       ],
-    );
-  }
-}
-
-// -----------------------------------------------------------
-// 3️⃣ ORB WIDGET (No Changes here)
-// -----------------------------------------------------------
-
-class Orb extends StatefulWidget {
-  final VoidCallback onTap;
-  final bool isListening;
-
-  const Orb({
-    super.key,
-    required this.onTap,
-    required this.isListening,
-  });
-
-  @override
-  State<Orb> createState() => _OrbState();
-}
-
-class _OrbState extends State<Orb> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          double scaleValue =
-              1.0 + (_controller.value * (widget.isListening ? 0.15 : 0.08));
-          return Transform.scale(
-            scale: scaleValue,
-            child: Container(
-              height: 600,
-              width: 600,
-              child: Image.asset(
-                "assets/orb.gif",
-                fit: BoxFit.cover,
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 }
