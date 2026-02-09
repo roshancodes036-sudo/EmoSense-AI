@@ -45,3 +45,5 @@ nbproject/
 
 # Ignore core business logic
 lib/core/
+*.apk
+*.zip
