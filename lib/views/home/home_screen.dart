@@ -29,13 +29,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _isListening = false;
   bool _isThinking = false;
   bool _showResultPanel = false;
-  String _text = "Tap to Orb";
+
+  // ✅ FIX: इसे खाली कर दिया ताकि नीचे डुप्लीकेट टेक्स्ट न आए
+  String _text = "";
   String _status = "SYSTEM OFFLINE";
 
   // Data Holders
   Map<String, dynamic>? _sentimentData;
   String _advice = "";
-  
+
   // Jarvis Dummy Data Holders
   String _heartRate = "--";
   String _stressLevel = "--";
@@ -63,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(
         parent: _panelController, curve: Curves.fastLinearToSlowEaseIn));
 
-    // ✅ Text Pulse Animation
+    // Text Pulse Animation
     _textPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -74,8 +76,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _initSystem() async {
     await Permission.microphone.request();
-    
-    // ✅ JARVIS SETTINGS
+
+    // JARVIS SETTINGS
     await _tts.setLanguage("en-US");
     await _tts.setPitch(1.0);
     await _tts.setSpeechRate(0.6);
@@ -196,7 +198,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _showResultPanel = true;
       });
       _panelController.forward();
-
     } catch (e) {
       _speak("Unable to connect to Gemini server.");
       setState(() {
@@ -250,7 +251,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 SafeArea(
                   child: Container(
                     margin: const EdgeInsets.only(top: 20),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
                           color: _isListening
@@ -261,7 +263,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Text(
                       _status,
                       style: TextStyle(
-                          color: _isListening ? Colors.redAccent : Colors.cyanAccent,
+                          color: _isListening
+                              ? Colors.redAccent
+                              : Colors.cyanAccent,
                           fontFamily: 'Courier',
                           letterSpacing: 2.0,
                           fontWeight: FontWeight.bold),
@@ -277,35 +281,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
 
                 const SizedBox(height: 30),
-                
-                // ✅ ONLY ONE TEXT HERE (Big & Animated)
+
+                // ✅ BIG ANIMATED TEXT (Sirf yahi dikhega)
                 if (!_isListening && !_isThinking)
                   FadeTransition(
-                    opacity: Tween<double>(begin: 0.6, end: 1.0).animate(_textPulseController),
+                    opacity: Tween<double>(begin: 0.6, end: 1.0)
+                        .animate(_textPulseController),
                     child: const Text(
                       "TAP TO ORB",
                       style: TextStyle(
-                          color: Colors.cyanAccent, 
+                          color: Colors.cyanAccent,
                           fontFamily: 'Courier',
-                          letterSpacing: 3.0, 
+                          letterSpacing: 3.0,
                           fontWeight: FontWeight.bold,
-                          fontSize: 18), 
+                          fontSize: 18),
                     ),
                   ),
 
                 const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Text(
-                    _text.toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 14,
-                        fontFamily: 'Courier',
-                        letterSpacing: 1.0),
+
+                // ✅ RESULT TEXT (Sirf tab dikhega jab aap bolenge)
+                if (_text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 30),
+                    child: Text(
+                      _text.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                          fontFamily: 'Courier',
+                          letterSpacing: 1.0),
+                    ),
                   ),
-                ),
+
                 const Spacer(),
                 const SizedBox(height: 100),
               ],
@@ -355,7 +364,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       height: 4,
                       color: Colors.white24,
                       margin: const EdgeInsets.only(bottom: 20))),
-              
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -371,7 +379,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ],
               ),
               const SizedBox(height: 20),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -380,9 +387,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   _buildDataBox("ENERGY", _energyLevel),
                 ],
               ),
-
               const SizedBox(height: 20),
-
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
@@ -425,7 +430,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       letterSpacing: 2,
                       fontFamily: 'Courier')),
               const SizedBox(height: 10),
-              
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -437,7 +441,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   }).toList(),
                 ),
               ),
-              
               Center(
                 child: GestureDetector(
                   onTap: () => _panelController.reverse(),
@@ -468,9 +471,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: Colors.white54, fontSize: 9, fontFamily: 'Courier')),
+        Text(title,
+            style: const TextStyle(
+                color: Colors.white54, fontSize: 9, fontFamily: 'Courier')),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Courier', fontWeight: FontWeight.bold)),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontFamily: 'Courier',
+                fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -508,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // -----------------------------------------------------------
-// 3️⃣ CLEAN ORB WIDGET (Final Version)
+// 3️⃣ ORB WIDGET (No Changes here)
 // -----------------------------------------------------------
 
 class Orb extends StatefulWidget {
@@ -550,7 +560,8 @@ class _OrbState extends State<Orb> with SingleTickerProviderStateMixin {
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          double scaleValue = 1.0 + (_controller.value * (widget.isListening ? 0.15 : 0.08));
+          double scaleValue =
+              1.0 + (_controller.value * (widget.isListening ? 0.15 : 0.08));
           return Transform.scale(
             scale: scaleValue,
             child: Container(
