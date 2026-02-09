@@ -4,7 +4,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 
 class ApiService {
   // ⚠️ REPLACE THIS WITH YOUR REAL API KEY
-  static const String _apiKey = "AIzaSyDQvt_5Xa8eeNbZwzdHZPF-yFJAoR1JN0w";
+  static const String _apiKey = "AIzaSyAuzRQ6eHmrI2lsefcl2nMeKlAAGNFcGwM";
 
   final GenerativeModel _model;
 

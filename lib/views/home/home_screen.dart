@@ -5,9 +5,10 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 
-// ✅ Custom Imports
+// ✅ Services Import
 import '../../core/services/api_service.dart';
-import '../../widgets/orb_widget.dart'; // We are importing the separate Orb file here
+// ✅ Widget Import
+import '../../widgets/orb_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,7 +72,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _initSystem() async {
-    await Permission.microphone.request();
+    // Request all necessary permissions
+    await [
+      Permission.microphone,
+      Permission.speech,
+    ].request();
 
     // JARVIS VOICE SETTINGS
     await _tts.setLanguage("en-US");
@@ -141,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() => _isListening = false);
   }
 
+  // ✅ UPDATED FUNCTION WITH DEBUGGING
   void _processVoice() async {
     if (_text.isEmpty || _text == "Listening..." || _text.length < 2) {
       _speak("Audio not captured. Please try again.");
@@ -154,7 +160,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
 
     try {
+      // API Call
       final data = await _apiService.analyzeSentiment(_text);
+
+      // ✅ DEBUG SUCCESS: Show Green Message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("✅ Gemini Connected! Processing..."),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+
       _sentimentData = data;
 
       Map<String, dynamic> overall = data['overall'];
@@ -188,18 +207,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       await _speak("Analysis complete. You are $mood. $action");
 
-      setState(() {
-        _isThinking = false;
-        _status = "ANALYSIS COMPLETE";
-        _showResultPanel = true;
-      });
-      _panelController.forward();
+      if (mounted) {
+        setState(() {
+          _isThinking = false;
+          _status = "ANALYSIS COMPLETE";
+          _showResultPanel = true;
+        });
+        _panelController.forward();
+      }
     } catch (e) {
+      // ❌ DEBUG ERROR: Show Red Message with actual error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("⚠️ Error: $e"),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+
       _speak("Unable to connect to Gemini server.");
-      setState(() {
-        _isThinking = false;
-        _text = "Error: Check Internet";
-      });
+
+      if (mounted) {
+        setState(() {
+          _isThinking = false;
+          _text = "Error: Check Internet/Key";
+        });
+      }
     }
   }
 
@@ -271,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 const Spacer(),
 
-                // ✅ ORB WIDGET (Using the separate file now)
+                // ORB WIDGET
                 Orb(
                   onTap: _handleOrbTap,
                   isListening: _isListening || _isThinking,
@@ -317,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-          
+
           // RESULT PANEL
           SlideTransition(
             position: _panelAnimation,
