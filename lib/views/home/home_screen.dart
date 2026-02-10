@@ -18,34 +18,42 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  // Services
   late stt.SpeechToText _speech;
   final FlutterTts _tts = FlutterTts();
   final ApiService _apiService = ApiService();
 
+  // Variables
   bool _isListening = false;
   bool _isThinking = false;
   bool _showResultPanel = false;
 
   String _text = "";
   String _status = "SYSTEM OFFLINE";
-  List<String> _consoleLogs = [];
 
+  // Data Holders
   Map<String, dynamic>? _sentimentData;
   String _advice = "";
+
+  // Jarvis Dummy Data Holders
   String _heartRate = "--";
   String _stressLevel = "--";
   String _energyLevel = "--";
 
+  // Animations
   late AnimationController _panelController;
   late Animation<Offset> _panelAnimation;
   late AnimationController _textPulseController;
-  Timer? _silenceTimer; // ⏱️ NEW: Silence Timer
+
+  // ⏱️ SMART SILENCE TIMER
+  Timer? _silenceTimer;
 
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
 
+    // Panel Animation
     _panelController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -57,31 +65,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(
         parent: _panelController, curve: Curves.fastLinearToSlowEaseIn));
 
+    // Text Pulse Animation
     _textPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    ApiService.liveLog.stream.listen((log) {
-      if (mounted) {
-        setState(() {
-          _consoleLogs.insert(0, "> $log");
-          if (_consoleLogs.length > 20) _consoleLogs.removeLast();
-        });
-      }
-    });
-
     _initSystem();
   }
 
   void _initSystem() async {
-    await [Permission.microphone, Permission.speech].request();
+    // Request all necessary permissions
+    await [
+      Permission.microphone,
+      Permission.speech,
+    ].request();
+
+    // JARVIS VOICE SETTINGS
     await _tts.setLanguage("en-US");
     await _tts.setPitch(1.0);
+    await _tts.setSpeechRate(0.6);
 
     if (mounted) setState(() => _status = "SYSTEM ONLINE");
+
     await Future.delayed(const Duration(milliseconds: 500));
-    await _speak("EmoSense AI Online.");
+    await _speak("EmoSense AI Online, Sir.");
   }
 
   Future<void> _speak(String text) async {
@@ -93,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _handleOrbTap() async {
     if (_isListening || _isThinking) {
-      _stopListening(); // Manual Stop
+      _stopListening();
       return;
     }
 
@@ -102,18 +110,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() => _showResultPanel = false);
     }
 
-    await _speak("Listening...");
+    await _speak("I am listening, Sir.");
     _startListening();
   }
 
   void _startListening() async {
     bool available = await _speech.initialize(
-      onError: (val) => ApiService.liveLog.add("STT Error: $val"),
+      onError: (val) => print('Error: $val'),
       onStatus: (val) {
-        if (val == 'done' || val == 'notListening') {
-          // ⚠️ DO NOT AUTO-STOP HERE immediately
-          // Hum manual timer se stop karenge taaki jaldi na kate
-        }
+        // Manual handling via timer, so minimal logic here
       },
     );
 
@@ -130,15 +135,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             _text = val.recognizedWords;
           });
 
-          // ⏱️ RESET TIMER: Jab tak banda bol raha hai, timer reset karo
-          _silenceTimer?.cancel();
-          _silenceTimer = Timer(const Duration(seconds: 2), () {
-            // Agar 2 second tak kuch nahi bola, tab process karo
-            if (_isListening) _stopListening();
+          // 🧠 SMART SILENCE LOGIC
+          // Har naye shabd par purana timer cancel karo
+          if (_silenceTimer?.isActive ?? false) _silenceTimer!.cancel();
+
+          // Naya timer shuru karo. Agar 1.5 second tak kuch nahi bola, to Stop.
+          _silenceTimer = Timer(const Duration(milliseconds: 1500), () {
+            if (_isListening && _text.length > 2) {
+              _stopListening();
+            }
           });
         },
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 5), // System pause duration
+        // Lambi baat sunne ke liye settings
+        pauseFor: const Duration(seconds: 10), // System auto-pause badha diya
+        listenFor: const Duration(seconds: 60), // Max listen duration
+        cancelOnError: false,
         partialResults: true,
         listenMode: stt.ListenMode.dictation,
       );
@@ -148,31 +159,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _stopListening() {
     _silenceTimer?.cancel();
     _speech.stop();
-    if (mounted && _isListening) {
+
+    if (mounted) {
       setState(() => _isListening = false);
       _processVoice();
     }
   }
 
   void _processVoice() async {
-    if (_text.isEmpty || _text == "Listening..." || _text.length < 3) {
-      _speak("I didn't catch that.");
+    if (_text.isEmpty || _text == "Listening..." || _text.length < 2) {
+      _speak("Audio not captured. Please try again.");
       setState(() => _status = "STANDBY");
       return;
     }
 
     setState(() {
       _isThinking = true;
-      _status = "ANALYZING...";
+      _status = "ANALYZING MOOD...";
     });
 
     try {
+      // API Call
       final data = await _apiService.analyzeSentiment(_text);
 
       _sentimentData = data;
       Map<String, dynamic> overall = data['overall'];
       String mood = "Neutral";
-      num maxVal = 0;
+      num maxVal = 0; // Changed to num to handle int/double safely
 
       overall.forEach((key, value) {
         if (value > maxVal) {
@@ -182,33 +195,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       });
 
       _generateJarvisData(mood);
-      _advice = _getAdvice(mood);
 
-      await _speak("Analysis complete. Mood detected: $mood.");
+      String action = "";
+      if (mood == "Happy") {
+        action = "Energy levels are optimal. Productivity is high.";
+      } else if (mood == "Sad") {
+        action = "Dopamine levels low. Recommending rest.";
+      } else if (mood == "Angry") {
+        action = "Adrenaline spike detected. Deep breathing advised.";
+      } else if (mood == "Fear") {
+        action = "Stress markers elevated. You are safe, Sir.";
+      } else {
+        action = "All systems operating normally.";
+      }
+
+      setState(() {
+        _advice = action;
+      });
+
+      await _speak("Analysis complete. You are $mood. $action");
 
       if (mounted) {
         setState(() {
           _isThinking = false;
-          _status = "COMPLETE";
+          _status = "ANALYSIS COMPLETE";
           _showResultPanel = true;
         });
         _panelController.forward();
       }
     } catch (e) {
-      _speak("Connection failed.");
-      setState(() {
-        _isThinking = false;
-        _text = "Error: Check Logs";
-      });
+      _speak("Unable to connect to Gemini server.");
+      if (mounted) {
+        setState(() {
+          _isThinking = false;
+          _text = "Error: Check Internet";
+        });
+      }
     }
-  }
-
-  String _getAdvice(String mood) {
-    if (mood == "Happy") return "Energy optimal.";
-    if (mood == "Sad") return "Rest advised.";
-    if (mood == "Angry") return "Deep breathing advised.";
-    if (mood == "Fear") return "You are safe.";
-    return "Systems normal.";
   }
 
   void _generateJarvisData(String mood) {
@@ -249,86 +272,78 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 🛠 SYSTEM DEBUG CONSOLE
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Container(
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
-                height: 150,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.8),
-                  border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(5),
-                      width: double.infinity,
-                      color: Colors.cyanAccent.withOpacity(0.1),
-                      child: const Text("JARVIS LIVE DEBUG",
-                          style: TextStyle(
-                              color: Colors.cyanAccent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        reverse: false, // Top to bottom
-                        padding: const EdgeInsets.all(8),
-                        itemCount: _consoleLogs.length,
-                        itemBuilder: (context, index) => Text(
-                          _consoleLogs[index],
-                          style: TextStyle(
-                              color: _consoleLogs[index].contains("Error") ||
-                                      _consoleLogs[index].contains("Failed")
-                                  ? Colors.redAccent
-                                  : Colors.greenAccent,
-                              fontSize: 10,
-                              fontFamily: 'Courier'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // MAIN CONTENT
           SizedBox.expand(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // STATUS BAR
+                SafeArea(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 20),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                          color: _isListening
+                              ? Colors.redAccent
+                              : Colors.cyanAccent.withOpacity(0.5)),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      _status,
+                      style: TextStyle(
+                          color: _isListening
+                              ? Colors.redAccent
+                              : Colors.cyanAccent,
+                          fontFamily: 'Courier',
+                          letterSpacing: 2.0,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
                 const Spacer(),
+
+                // ORB WIDGET
                 Orb(
-                    onTap: _handleOrbTap,
-                    isListening: _isListening || _isThinking),
+                  onTap: _handleOrbTap,
+                  isListening: _isListening || _isThinking,
+                ),
+
                 const SizedBox(height: 30),
+
+                // ANIMATED TEXT
                 if (!_isListening && !_isThinking)
                   FadeTransition(
-                    opacity: _textPulseController,
-                    child: const Text("TAP TO START",
-                        style: TextStyle(
-                            color: Colors.cyanAccent,
-                            letterSpacing: 3,
-                            fontSize: 16)),
+                    opacity: Tween<double>(begin: 0.6, end: 1.0)
+                        .animate(_textPulseController),
+                    child: const Text(
+                      "TAP TO ORB",
+                      style: TextStyle(
+                          color: Colors.cyanAccent,
+                          fontFamily: 'Courier',
+                          letterSpacing: 3.0,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18),
+                    ),
                   ),
+
                 const SizedBox(height: 20),
-                if (_text.isNotEmpty)
+
+                // SPEECH TEXT
+                if (_text.isNotEmpty && _text != "Tap to Orb")
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: Text(_text.toUpperCase(),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                            fontFamily: 'Courier')),
+                    child: Text(
+                      _text.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                          fontFamily: 'Courier',
+                          letterSpacing: 1.0),
+                    ),
                   ),
+
                 const Spacer(),
                 const SizedBox(height: 100),
               ],
@@ -339,60 +354,141 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           SlideTransition(
             position: _panelAnimation,
             child: Align(
-                alignment: Alignment.bottomCenter, child: _buildGlassCard()),
+              alignment: Alignment.bottomCenter,
+              child: _buildGlassCard(),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ... (Baaki glass card code same rahega) ...
   Widget _buildGlassCard() {
     if (_sentimentData == null) return const SizedBox.shrink();
     var overall = _sentimentData!['overall'] as Map<String, dynamic>;
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
-          height: 500,
+          height: 520,
           width: double.infinity,
           padding: const EdgeInsets.all(25),
           decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.85),
-              border: const Border(
-                  top: BorderSide(color: Colors.cyanAccent, width: 2))),
+            color: Colors.black.withOpacity(0.85),
+            border: const Border(
+                top: BorderSide(color: Colors.cyanAccent, width: 2)),
+            gradient: LinearGradient(
+              colors: [Colors.cyanAccent.withOpacity(0.1), Colors.black],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("ANALYSIS COMPLETE",
+              Center(
+                  child: Container(
+                      width: 50,
+                      height: 4,
+                      color: Colors.white24,
+                      margin: const EdgeInsets.only(bottom: 20))),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("BIOMETRIC ANALYSIS",
+                      style: TextStyle(
+                          color: Colors.cyanAccent,
+                          fontSize: 14,
+                          letterSpacing: 3,
+                          fontFamily: 'Courier',
+                          fontWeight: FontWeight.bold)),
+                  const Icon(Icons.monitor_heart_outlined,
+                      color: Colors.cyanAccent, size: 20),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildDataBox("HEART RATE", _heartRate),
+                  _buildDataBox("STRESS", _stressLevel),
+                  _buildDataBox("ENERGY", _energyLevel),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+                  borderRadius: BorderRadius.circular(5),
+                  color: Colors.cyanAccent.withOpacity(0.05),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.verified_user, color: Colors.cyanAccent),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("JARVIS PROTOCOL:",
+                              style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 10,
+                                  fontFamily: 'Courier',
+                                  letterSpacing: 1.5)),
+                          const SizedBox(height: 5),
+                          Text(_advice.toUpperCase(),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontFamily: 'Courier',
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 25),
+              const Text("EMOTION MATRIX:",
                   style: TextStyle(
-                      color: Colors.cyanAccent,
-                      fontSize: 16,
-                      fontFamily: 'Courier',
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                _buildDataBox("HEART RATE", _heartRate),
-                _buildDataBox("MOOD", _advice),
-              ]),
-              const SizedBox(height: 20),
+                      color: Colors.white54,
+                      fontSize: 10,
+                      letterSpacing: 2,
+                      fontFamily: 'Courier')),
+              const SizedBox(height: 10),
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
                   childAspectRatio: 3,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  children: overall.entries
-                      .map((e) => _buildEmotionBar(e.key, e.value))
-                      .toList(),
+                  children: overall.entries.map((e) {
+                    return _buildEmotionBar(e.key, e.value);
+                  }).toList(),
                 ),
               ),
-              ElevatedButton(
-                onPressed: () => _panelController.reverse(),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent.withOpacity(0.2)),
-                child: const Text("CLOSE",
-                    style: TextStyle(color: Colors.redAccent)),
+              Center(
+                child: GestureDetector(
+                  onTap: () => _panelController.reverse(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 30, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.redAccent),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text("CLOSE INTERFACE",
+                        style: TextStyle(
+                            color: Colors.redAccent,
+                            letterSpacing: 2,
+                            fontFamily: 'Courier',
+                            fontSize: 12)),
+                  ),
+                ),
               )
             ],
           ),
@@ -401,21 +497,52 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildDataBox(String t, String v) => Column(children: [
-        Text(t, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-        Text(v,
+  Widget _buildDataBox(String title, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
             style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold))
-      ]);
+                color: Colors.white54, fontSize: 9, fontFamily: 'Courier')),
+        const SizedBox(height: 4),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontFamily: 'Courier',
+                fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
 
   Widget _buildEmotionBar(String label, dynamic value) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text("$label: $value%",
-          style: const TextStyle(color: Colors.white70, fontSize: 12)),
-      LinearProgressIndicator(
-          value: (value as num) / 100,
-          color: Colors.cyanAccent,
-          backgroundColor: Colors.white10),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label.toUpperCase(),
+                style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10,
+                    fontFamily: 'Courier')),
+            Text("$value%",
+                style: const TextStyle(
+                    color: Colors.cyanAccent,
+                    fontSize: 10,
+                    fontFamily: 'Courier',
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 5),
+        LinearProgressIndicator(
+          value: (value as num) / 100, // Safe casting for num
+          backgroundColor: Colors.white10,
+          color: value > 50 ? Colors.cyanAccent : Colors.purpleAccent,
+          minHeight: 2,
+        ),
+      ],
+    );
   }
 }
