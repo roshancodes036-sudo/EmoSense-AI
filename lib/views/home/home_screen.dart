@@ -53,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _speech = stt.SpeechToText();
 
-    // Panel Animation
     _panelController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -65,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(
         parent: _panelController, curve: Curves.fastLinearToSlowEaseIn));
 
-    // Text Pulse Animation
     _textPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -75,16 +73,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _initSystem() async {
-    // Request all necessary permissions
-    await [
-      Permission.microphone,
-      Permission.speech,
-    ].request();
+    await [Permission.microphone, Permission.speech].request();
 
-    // JARVIS VOICE SETTINGS
+    // ⚡ FASTER SPEECH SETTINGS
     await _tts.setLanguage("en-US");
     await _tts.setPitch(1.0);
-    await _tts.setSpeechRate(0.6);
+    await _tts.setSpeechRate(0.6); // Thoda tez bolega
 
     if (mounted) setState(() => _status = "SYSTEM ONLINE");
 
@@ -110,16 +104,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() => _showResultPanel = false);
     }
 
-    await _speak("I am listening, Sir.");
+    await _speak("I am listening...");
     _startListening();
   }
 
   void _startListening() async {
     bool available = await _speech.initialize(
       onError: (val) => print('Error: $val'),
-      onStatus: (val) {
-        // Manual handling via timer, so minimal logic here
-      },
+      onStatus: (val) {},
     );
 
     if (available) {
@@ -135,20 +127,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             _text = val.recognizedWords;
           });
 
-          // 🧠 SMART SILENCE LOGIC
-          // Har naye shabd par purana timer cancel karo
+          // ⚡ SUPER FAST LOGIC:
           if (_silenceTimer?.isActive ?? false) _silenceTimer!.cancel();
 
-          // Naya timer shuru karo. Agar 1.5 second tak kuch nahi bola, to Stop.
-          _silenceTimer = Timer(const Duration(milliseconds: 1500), () {
+          // 🔴 CHANGE: 1500ms se ghatakar 800ms kar दिया (Fast Response)
+          _silenceTimer = Timer(const Duration(milliseconds: 800), () {
             if (_isListening && _text.length > 2) {
               _stopListening();
             }
           });
         },
-        // Lambi baat sunne ke liye settings
-        pauseFor: const Duration(seconds: 10), // System auto-pause badha diya
-        listenFor: const Duration(seconds: 60), // Max listen duration
+        pauseFor: const Duration(seconds: 5),
+        listenFor: const Duration(seconds: 60),
         cancelOnError: false,
         partialResults: true,
         listenMode: stt.ListenMode.dictation,
@@ -159,7 +149,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _stopListening() {
     _silenceTimer?.cancel();
     _speech.stop();
-
     if (mounted) {
       setState(() => _isListening = false);
       _processVoice();
@@ -168,24 +157,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _processVoice() async {
     if (_text.isEmpty || _text == "Listening..." || _text.length < 2) {
-      _speak("Audio not captured. Please try again.");
+      _speak("Audio not captured.");
       setState(() => _status = "STANDBY");
       return;
     }
 
     setState(() {
       _isThinking = true;
-      _status = "ANALYZING MOOD...";
+      _status = "ANALYZING...";
     });
 
     try {
-      // API Call
       final data = await _apiService.analyzeSentiment(_text);
-
       _sentimentData = data;
       Map<String, dynamic> overall = data['overall'];
       String mood = "Neutral";
-      num maxVal = 0; // Changed to num to handle int/double safely
+      num maxVal = 0;
 
       overall.forEach((key, value) {
         if (value > maxVal) {
@@ -197,40 +184,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _generateJarvisData(mood);
 
       String action = "";
-      if (mood == "Happy") {
-        action = "Energy levels are optimal. Productivity is high.";
-      } else if (mood == "Sad") {
-        action = "Dopamine levels low. Recommending rest.";
-      } else if (mood == "Angry") {
-        action = "Adrenaline spike detected. Deep breathing advised.";
-      } else if (mood == "Fear") {
-        action = "Stress markers elevated. You are safe, Sir.";
-      } else {
-        action = "All systems operating normally.";
-      }
+      if (mood == "Happy")
+        action = "Energy levels optimal.";
+      else if (mood == "Sad")
+        action = "Rest advised.";
+      else if (mood == "Angry")
+        action = "Deep breathing advised.";
+      else if (mood == "Fear")
+        action = "You are safe.";
+      else
+        action = "Systems normal.";
 
-      setState(() {
-        _advice = action;
-      });
+      setState(() => _advice = action);
 
-      await _speak("Analysis complete. You are $mood. $action");
+      // ⚡ SHORT RESPONSE (Taaki jaldi bole)
+      await _speak("You are $mood. $action");
 
       if (mounted) {
         setState(() {
           _isThinking = false;
-          _status = "ANALYSIS COMPLETE";
+          _status = "COMPLETE";
           _showResultPanel = true;
         });
         _panelController.forward();
       }
     } catch (e) {
-      _speak("Unable to connect to Gemini server.");
-      if (mounted) {
-        setState(() {
-          _isThinking = false;
-          _text = "Error: Check Internet";
-        });
-      }
+      _speak("Connection error.");
+      if (mounted) setState(() => _isThinking = false);
     }
   }
 
@@ -272,85 +252,97 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          SizedBox.expand(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // STATUS BAR
-                SafeArea(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 20),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                          color: _isListening
-                              ? Colors.redAccent
-                              : Colors.cyanAccent.withOpacity(0.5)),
-                      borderRadius: BorderRadius.circular(5),
+          // ✅ LAYER 1: SCROLLABLE CONTENT (Orb + Text)
+          Positioned.fill(
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 100),
+
+                    // ORB WIDGET
+                    SizedBox(
+                      height: 250,
+                      width: 250,
+                      child: Orb(
+                        onTap: _handleOrbTap,
+                        isListening: _isListening || _isThinking,
+                      ),
                     ),
-                    child: Text(
-                      _status,
-                      style: TextStyle(
-                          color: _isListening
-                              ? Colors.redAccent
-                              : Colors.cyanAccent,
-                          fontFamily: 'Courier',
-                          letterSpacing: 2.0,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
+
+                    const SizedBox(height: 40),
+
+                    if (!_isListening && !_isThinking)
+                      FadeTransition(
+                        opacity: Tween<double>(begin: 0.6, end: 1.0)
+                            .animate(_textPulseController),
+                        child: const Text(
+                          "TAP TO ORB",
+                          style: TextStyle(
+                              color: Colors.cyanAccent,
+                              fontFamily: 'Courier',
+                              letterSpacing: 3.0,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18),
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+
+                    if (_text.isNotEmpty && _text != "Tap to Orb")
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 30),
+                        child: Text(
+                          _text.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 14,
+                              fontFamily: 'Courier',
+                              letterSpacing: 1.0),
+                        ),
+                      ),
+
+                    const SizedBox(height: 150),
+                  ],
                 ),
-                const Spacer(),
-
-                // ORB WIDGET
-                Orb(
-                  onTap: _handleOrbTap,
-                  isListening: _isListening || _isThinking,
-                ),
-
-                const SizedBox(height: 30),
-
-                // ANIMATED TEXT
-                if (!_isListening && !_isThinking)
-                  FadeTransition(
-                    opacity: Tween<double>(begin: 0.6, end: 1.0)
-                        .animate(_textPulseController),
-                    child: const Text(
-                      "TAP TO ORB",
-                      style: TextStyle(
-                          color: Colors.cyanAccent,
-                          fontFamily: 'Courier',
-                          letterSpacing: 3.0,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18),
-                    ),
-                  ),
-
-                const SizedBox(height: 20),
-
-                // SPEECH TEXT
-                if (_text.isNotEmpty && _text != "Tap to Orb")
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: Text(
-                      _text.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 14,
-                          fontFamily: 'Courier',
-                          letterSpacing: 1.0),
-                    ),
-                  ),
-
-                const Spacer(),
-                const SizedBox(height: 100),
-              ],
+              ),
             ),
           ),
 
-          // RESULT PANEL
+          // ✅ LAYER 2: PINNED STATUS BAR
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                margin: const EdgeInsets.only(top: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                      color: _isListening
+                          ? Colors.redAccent
+                          : Colors.cyanAccent.withOpacity(0.5)),
+                  borderRadius: BorderRadius.circular(5),
+                  color: Colors.black.withOpacity(0.5),
+                ),
+                child: Text(
+                  _status,
+                  style: TextStyle(
+                      color:
+                          _isListening ? Colors.redAccent : Colors.cyanAccent,
+                      fontFamily: 'Courier',
+                      letterSpacing: 2.0,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+
+          // ✅ LAYER 3: RESULT PANEL
           SlideTransition(
             position: _panelAnimation,
             child: Align(
@@ -380,10 +372,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             border: const Border(
                 top: BorderSide(color: Colors.cyanAccent, width: 2)),
             gradient: LinearGradient(
-              colors: [Colors.cyanAccent.withOpacity(0.1), Colors.black],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+                colors: [Colors.cyanAccent.withOpacity(0.1), Colors.black],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,63 +385,53 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       height: 4,
                       color: Colors.white24,
                       margin: const EdgeInsets.only(bottom: 20))),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("BIOMETRIC ANALYSIS",
-                      style: TextStyle(
-                          color: Colors.cyanAccent,
-                          fontSize: 14,
-                          letterSpacing: 3,
-                          fontFamily: 'Courier',
-                          fontWeight: FontWeight.bold)),
-                  const Icon(Icons.monitor_heart_outlined,
-                      color: Colors.cyanAccent, size: 20),
-                ],
-              ),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                const Text("BIOMETRIC ANALYSIS",
+                    style: TextStyle(
+                        color: Colors.cyanAccent,
+                        fontSize: 14,
+                        letterSpacing: 3,
+                        fontFamily: 'Courier',
+                        fontWeight: FontWeight.bold)),
+                const Icon(Icons.monitor_heart_outlined,
+                    color: Colors.cyanAccent, size: 20),
+              ]),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildDataBox("HEART RATE", _heartRate),
-                  _buildDataBox("STRESS", _stressLevel),
-                  _buildDataBox("ENERGY", _energyLevel),
-                ],
-              ),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                _buildDataBox("HEART RATE", _heartRate),
+                _buildDataBox("STRESS", _stressLevel),
+                _buildDataBox("ENERGY", _energyLevel),
+              ]),
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
-                  borderRadius: BorderRadius.circular(5),
-                  color: Colors.cyanAccent.withOpacity(0.05),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.verified_user, color: Colors.cyanAccent),
-                    const SizedBox(width: 15),
-                    Expanded(
+                    border:
+                        Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(5),
+                    color: Colors.cyanAccent.withOpacity(0.05)),
+                child: Row(children: [
+                  const Icon(Icons.verified_user, color: Colors.cyanAccent),
+                  const SizedBox(width: 15),
+                  Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("JARVIS PROTOCOL:",
-                              style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 10,
-                                  fontFamily: 'Courier',
-                                  letterSpacing: 1.5)),
-                          const SizedBox(height: 5),
-                          Text(_advice.toUpperCase(),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontFamily: 'Courier',
-                                  fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        const Text("JARVIS PROTOCOL:",
+                            style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 10,
+                                fontFamily: 'Courier',
+                                letterSpacing: 1.5)),
+                        const SizedBox(height: 5),
+                        Text(_advice.toUpperCase(),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontFamily: 'Courier',
+                                fontWeight: FontWeight.bold)),
+                      ])),
+                ]),
               ),
               const SizedBox(height: 25),
               const Text("EMOTION MATRIX:",
@@ -466,9 +447,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   childAspectRatio: 3,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  children: overall.entries.map((e) {
-                    return _buildEmotionBar(e.key, e.value);
-                  }).toList(),
+                  children: overall.entries
+                      .map((e) => _buildEmotionBar(e.key, e.value))
+                      .toList(),
                 ),
               ),
               Center(
@@ -478,9 +459,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 30, vertical: 10),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.redAccent),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                        border: Border.all(color: Colors.redAccent),
+                        borderRadius: BorderRadius.circular(20)),
                     child: const Text("CLOSE INTERFACE",
                         style: TextStyle(
                             color: Colors.redAccent,
@@ -497,52 +477,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildDataBox(String title, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
+  Widget _buildDataBox(String t, String v) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(t,
             style: const TextStyle(
                 color: Colors.white54, fontSize: 9, fontFamily: 'Courier')),
         const SizedBox(height: 4),
-        Text(value,
+        Text(v,
             style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
                 fontFamily: 'Courier',
-                fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
+                fontWeight: FontWeight.bold))
+      ]);
 
-  Widget _buildEmotionBar(String label, dynamic value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label.toUpperCase(),
-                style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                    fontFamily: 'Courier')),
-            Text("$value%",
-                style: const TextStyle(
-                    color: Colors.cyanAccent,
-                    fontSize: 10,
-                    fontFamily: 'Courier',
-                    fontWeight: FontWeight.bold)),
-          ],
-        ),
+  Widget _buildEmotionBar(String l, dynamic v) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(l.toUpperCase(),
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 10, fontFamily: 'Courier')),
+          Text("$v%",
+              style: const TextStyle(
+                  color: Colors.cyanAccent,
+                  fontSize: 10,
+                  fontFamily: 'Courier',
+                  fontWeight: FontWeight.bold))
+        ]),
         const SizedBox(height: 5),
         LinearProgressIndicator(
-          value: (value as num) / 100, // Safe casting for num
-          backgroundColor: Colors.white10,
-          color: value > 50 ? Colors.cyanAccent : Colors.purpleAccent,
-          minHeight: 2,
-        ),
-      ],
-    );
-  }
+            value: (v as num) / 100,
+            backgroundColor: Colors.white10,
+            color: v > 50 ? Colors.cyanAccent : Colors.purpleAccent,
+            minHeight: 2)
+      ]);
 }
